@@ -1,19 +1,19 @@
 import '../../App.css';
-import React, {useEffect, useState} from 'react';
-import {getSecretsforUser} from "../../comunication/FetchSecrets";
+import React, { useEffect, useState } from 'react';
+import { getSecretsforUser } from "../../comunication/FetchSecrets";
 
 /**
  * Secrets
  * @author Peter Rutschmann
  */
-const Secrets = ({loginValues}) => {
+const Secrets = ({ loginValues }) => {
     const [secrets, setSecrets] = useState([]);
     const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
         const fetchSecrets = async () => {
             setErrorMessage('');
-            if( ! loginValues.email){
+            if (!loginValues.email) {
                 console.error('Secrets: No valid email, please do login first:' + loginValues);
                 setErrorMessage("No valid email, please do login first.");
             } else {
@@ -32,32 +32,39 @@ const Secrets = ({loginValues}) => {
 
     return (
         <>
-            <h1>my secrets</h1>
-            {errorMessage && <p style={{color: 'red'}}>{errorMessage}</p>}
-             <form>
-                <h2>secrets</h2>
+            <h1>My Secrets</h1>
+            {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+            <form>
+                <h2>Secrets</h2>
                 <table border="1">
                     <thead>
                     <tr>
-                        <th>secret id</th>
-                        <th>user id</th>
-                        <th>content</th>
+                        <th>Secret ID</th>
+                        <th>User ID</th>
+                        <th>Kind</th>
+                        <th>Username</th>
+                        <th>Password</th>
+                        <th>URL</th>
                     </tr>
                     </thead>
                     <tbody>
                     {secrets?.length > 0 ? (
-                        secrets.map(secret => (
-                            <tr key={secret.id}>
-                                <td>{secret.id}</td>
-                                <td>{secret.userId}</td>
-                                <td>
-                                    <pre>{JSON.stringify(secret.content, null, 2)}</pre>
-                                </td>
-                            </tr>
-                        ))
+                        secrets.map(secret => {
+                            const content = JSON.parse(secret.content); // JSON parsen
+                            return (
+                                <tr key={secret.id}>
+                                    <td>{secret.id}</td>
+                                    <td>{secret.userId}</td>
+                                    <td>{content.kind}</td>
+                                    <td>{content.userName}</td>
+                                    <td>{content.password}</td>
+                                    <td>{content.url}</td>
+                                </tr>
+                            );
+                        })
                     ) : (
                         <tr>
-                            <td colSpan="3">No secrets available</td>
+                            <td colSpan="6">No secrets available</td>
                         </tr>
                     )}
                     </tbody>

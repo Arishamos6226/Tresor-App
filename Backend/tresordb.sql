@@ -18,7 +18,8 @@ CREATE TABLE user (
 CREATE TABLE secret (
     id INT NOT NULL AUTO_INCREMENT,
     user_id INT NOT NULL,
-    content JSON NOT NULL,
+    salt VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (user_id) REFERENCES user(id)
 );
