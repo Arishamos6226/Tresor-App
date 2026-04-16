@@ -25,9 +25,9 @@ CREATE TABLE secret (
 );
 
 INSERT INTO `user` (`id`, `first_name`, `last_name`, `email`, `password`) VALUES
-(1, 'Hans', 'Muster', 'hans.muster@bbw.ch', 'abcd'),
-(2, 'Paula', 'Kuster', 'paula.kuster@bbw.ch', 'efgh'),
-(3, 'Andrea', 'Oester', 'andrea.oester@bbw.ch', 'ijkl');
+(1, 'Hans', 'Muster', 'hans.muster@bbw.ch', '$2y$12$IYKTUF3YeQSBKt3t0r..IO8NgPAj.n7Rbx4uTCrh9Bpxiyoq1/SUC'),
+(2, 'Paula', 'Kuster', 'paula.kuster@bbw.ch', '$2y$12$4swKo4tzpRemKVOkBfHETeQDutDX.vy1jo3kQf..4hKlfZ/6YCBgK'),
+(3, 'Andrea', 'Oester', 'andrea.oester@bbw.ch', '$2y$12$20zjlksx24bpHs808MyZHO6GASwrUHLileD1zzr8xOVA0Qz8.0wEe');
 
 INSERT INTO `secret` (`id`, `user_id`, `content`) VALUES
     (1, 1, '{"kindid":1,"kind":"credential","userName":"muster","password":"1234","url":"www.bbw.ch"}'),
