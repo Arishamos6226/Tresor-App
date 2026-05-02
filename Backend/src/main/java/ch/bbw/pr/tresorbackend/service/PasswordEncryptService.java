@@ -45,9 +45,8 @@ public class PasswordEncryptService {
    }
 
    //Todo add password match function: password vs hashedPassword
-    public boolean verifyPassword(String password, String hashedPassword) {
-        //todo add implementation here
-       String rawPasswordWithPepper = password + pepper;
-        return passwordEncoder.matches(hashedPassword, rawPasswordWithPepper);
-    }
+   public boolean doPasswordMatch(String password, String hashedPassword) {
+      System.out.println("PasswordEncryptService.doPasswordMatch: password=" + password + ", hashedPassword=" + hashedPassword);
+      return passwordEncoder.matches(password + pepper, hashedPassword);
+   }
 }

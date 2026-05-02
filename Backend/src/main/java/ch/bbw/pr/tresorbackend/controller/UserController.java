@@ -173,26 +173,29 @@ public class UserController {
    @CrossOrigin(origins = "${CROSS_ORIGIN}")
    @PostMapping("/login")
    public ResponseEntity<LoginResponse> doLoginUser(@RequestBody LoginUser loginUser, BindingResult bindingResult) {
-      System.out.println("UserController.doLoginUser: " + loginUser);
+       System.out.println("UserController.doLoginUser: " + loginUser);
 
-      if (bindingResult.hasErrors()) {
-         String errorMessage = bindingResult.getFieldErrors().stream()
-                 .map(fieldError -> fieldError.getField() + ": " + fieldError.getDefaultMessage())
-                 .collect(Collectors.joining("; "));
-         return ResponseEntity.badRequest().body(new LoginResponse(errorMessage, null));
-      }
+       if (bindingResult.hasErrors()) {
+           String errorMessage = bindingResult.getFieldErrors().stream()
+                   .map(fieldError -> fieldError.getField() + ": " + fieldError.getDefaultMessage())
+                   .collect(Collectors.joining("; "));
+           return ResponseEntity.badRequest().body(new LoginResponse(errorMessage, null));
+       }
 
-      User user = userService.findByEmail(loginUser.getEmail());
-      if (user == null) {
-         System.out.println("UserController.doLoginUser: user not found");
-         return ResponseEntity.badRequest().body(new LoginResponse("No user found with this email", null));
-      }
+       User user = userService.findByEmail(loginUser.getEmail());
+       if (user == null) {
+           System.out.println("UserController.doLoginUser: user not found");
+           return ResponseEntity.badRequest().body(new LoginResponse("No user found with this email", null));
+       }
 
-      //ToDo: add verification for password match: loginUser.getPassword() vs user.getPassword
-      //todo add implementation
+       // Passwort-Überprüfung
+       if (!passwordService.doPasswordMatch(loginUser.getPassword(), user.getPassword())) {
+           System.out.println("UserController.doLoginUser: Passwort stimmt nicht überein");
+           return ResponseEntity.badRequest().body(new LoginResponse("Invalid password", null));
+       }
 
-      System.out.println("UserController.doLoginUser: login successful");
-      return ResponseEntity.ok(new LoginResponse("Login successful", user.getId()));
+       System.out.println("UserController.doLoginUser: login successful");
+       return ResponseEntity.ok(new LoginResponse("Login successful", user.getId()));
    }
 
 }

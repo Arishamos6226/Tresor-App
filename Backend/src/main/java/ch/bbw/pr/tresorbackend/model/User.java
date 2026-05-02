@@ -1,10 +1,7 @@
 package ch.bbw.pr.tresorbackend.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 /**
  * User
@@ -32,4 +29,15 @@ public class User {
 
    @Column(nullable = false)
    private String password;
+
+   @Column(name = "salt")
+   private String salt;
+
+   public User(Long id, String firstName, String lastName, String email, String password) {
+      this.id = id;
+      this.firstName = firstName;
+      this.lastName = lastName;
+      this.email = email;
+      this.password = password;
+   }
 }
