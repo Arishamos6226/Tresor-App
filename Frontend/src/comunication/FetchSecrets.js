@@ -73,3 +73,48 @@ export const getSecretsforUser = async (loginValues) => {
         throw new Error('Failed to get secrets. ' || error.message);
     }
 };
+
+const getApiUrl = () => {
+    const protocol = process.env.REACT_APP_API_PROTOCOL;
+    const host = process.env.REACT_APP_API_HOST;
+    const port = process.env.REACT_APP_API_PORT;
+    const path = process.env.REACT_APP_API_PATH;
+    const portPart = port ? `:${port}` : '';
+    return `${protocol}://${host}${portPart}${path}`;
+};
+
+export const deleteSecret = async (id) => {
+    const API_URL = getApiUrl();
+
+    const response = await fetch(`${API_URL}/secrets/${id}`, {
+        method: 'DELETE',
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || 'Failed to delete secret');
+    }
+
+    return await response.text();
+};
+
+export const updateSecret = async (id, loginValues, content) => {
+    const API_URL = getApiUrl();
+
+    const response = await fetch(`${API_URL}/secrets/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            email: loginValues.email,
+            encryptPassword: loginValues.password,
+            content: content
+        }),
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || 'Failed to update secret');
+    }
+
+    return await response.json();
+};

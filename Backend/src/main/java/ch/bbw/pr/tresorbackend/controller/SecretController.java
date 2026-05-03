@@ -178,71 +178,69 @@ public class SecretController {
    // PUT /api/secrets/{id}  → Secret aktualisieren
    // ─────────────────────────────────────────────
    @CrossOrigin(origins = "${CROSS_ORIGIN}")
-   @PutMapping("{id}")
+   @PutMapping("/{id}")
    public ResponseEntity<String> updateSecret(
            @PathVariable("id") Long secretId,
            @Valid @RequestBody NewSecret newSecret,
            BindingResult bindingResult) {
 
-      // Input-Validierung
       if (bindingResult.hasErrors()) {
          List<String> errors = bindingResult.getFieldErrors().stream()
                  .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
                  .collect(Collectors.toList());
+
          JsonArray arr = new JsonArray();
          errors.forEach(arr::add);
+
          JsonObject obj = new JsonObject();
          obj.add("message", arr);
          return ResponseEntity.badRequest().body(new Gson().toJson(obj));
       }
 
-      // Secret in DB suchen
       Secret dbSecret = secretService.getSecretById(secretId);
       if (dbSecret == null) {
          JsonObject obj = new JsonObject();
-         obj.addProperty("answer", "Secret not found in db");
-         return ResponseEntity.badRequest().body(new Gson().toJson(obj));
+         obj.addProperty("answer", "Secret not found");
+         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Gson().toJson(obj));
       }
 
-      // Benutzer suchen
       User user = userService.findByEmail(newSecret.getEmail());
-      if (user == null) return ResponseEntity.notFound().build();
+      if (user == null) {
+         return ResponseEntity.notFound().build();
+      }
 
-      // Prüfen ob Secret zum Benutzer gehört
       if (!dbSecret.getUserId().equals(user.getId())) {
          JsonObject obj = new JsonObject();
          obj.addProperty("answer", "Secret does not belong to this user");
-         return ResponseEntity.badRequest().body(new Gson().toJson(obj));
+         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Gson().toJson(obj));
       }
 
-      // Passwort verifizieren: altes Secret entschlüsseln
       try {
          EncryptUtil encryptUtil = new EncryptUtil(newSecret.getEncryptPassword(), user.getSalt());
+
+         // Passwort prüfen
          encryptUtil.decrypt(dbSecret.getContent());
-      } catch (Exception e) {
-         System.err.println("updateSecret: Password verification failed: " + e.getMessage());
-         JsonObject obj = new JsonObject();
-         obj.addProperty("answer", "Password not correct or decryption failed.");
-         return ResponseEntity.badRequest().body(new Gson().toJson(obj));
-      }
 
-      // Neuen Inhalt verschlüsseln und speichern
-      try {
-         EncryptUtil encryptUtil = new EncryptUtil(newSecret.getEncryptPassword(), user.getSalt());
+         // Neue Daten verschlüsseln
          String encryptedContent = encryptUtil.encrypt(newSecret.getContent().toString());
+
          Secret updatedSecret = new Secret(secretId, user.getId(), encryptedContent);
-         secretService.updateSecret(updatedSecret);
+         Secret saved = secretService.updateSecret(updatedSecret);
+
+         if (saved == null) {
+            JsonObject obj = new JsonObject();
+            obj.addProperty("answer", "Secret could not be updated");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new Gson().toJson(obj));
+         }
 
          JsonObject obj = new JsonObject();
          obj.addProperty("answer", "Secret updated");
-         return ResponseEntity.accepted().body(new Gson().toJson(obj));
+         return ResponseEntity.ok(new Gson().toJson(obj));
 
       } catch (Exception e) {
-         System.err.println("updateSecret: Encryption failed: " + e.getMessage());
          JsonObject obj = new JsonObject();
-         obj.addProperty("message", "Encryption failed: " + e.getMessage());
-         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                 .body(new Gson().toJson(obj));
+         obj.addProperty("answer", "Password not correct or decryption failed.");
+         return ResponseEntity.badRequest().body(new Gson().toJson(obj));
       }
    }
 
@@ -250,9 +248,18 @@ public class SecretController {
    // DELETE /api/secrets/{id}  → Secret löschen
    // ─────────────────────────────────────────────
    @CrossOrigin(origins = "${CROSS_ORIGIN}")
-   @DeleteMapping("{id}")
-   public ResponseEntity<String> deleteSecret(@PathVariable("id") Long secretId) {
-      secretService.deleteSecret(secretId);
-      return new ResponseEntity<>("Secret successfully deleted!", HttpStatus.OK);
+   @DeleteMapping("/{id}")
+   public ResponseEntity<String> deleteSecret(@PathVariable Long id) {
+      Secret dbSecret = secretService.getSecretById(id);
+      if (dbSecret == null) {
+         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Secret not found");
+      }
+
+      try {
+         secretService.deleteSecret(id);
+         return ResponseEntity.ok("Secret deleted successfully");
+      } catch (Exception e) {
+         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Delete failed");
+      }
    }
 }

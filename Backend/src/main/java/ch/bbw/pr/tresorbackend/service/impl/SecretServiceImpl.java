@@ -39,13 +39,19 @@ public class SecretServiceImpl implements SecretService {
 
    @Override
    public Secret updateSecret(Secret secret) {
-      Optional<Secret> optionalSecret = SafeDbCall.safeDbCall(() -> secretRepository.findById(secret.getId())
-              , Optional.empty());
-      Secret existingSecret = optionalSecret.get();
+      Secret existingSecret = SafeDbCall.safeDbCall(
+              () -> secretRepository.findById(secret.getId()).orElse(null),
+              null
+      );
+
+      if (existingSecret == null) {
+         return null;
+      }
+
       existingSecret.setUserId(secret.getUserId());
       existingSecret.setContent(secret.getContent());
-      Secret updatedSecret = SafeDbCall.safeDbCall(() -> secretRepository.save(existingSecret), null);
-      return updatedSecret;
+
+      return SafeDbCall.safeDbCall(() -> secretRepository.save(existingSecret), null);
    }
 
    @Override
