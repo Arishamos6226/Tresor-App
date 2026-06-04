@@ -12,20 +12,20 @@ import org.springframework.stereotype.Service;
 @Service
 public class PasswordEncryptService {
    //todo add implementation here
-   private final String pepper; // In production, store this securely and do not hardcode
+   private final String pepper;
 
    private final BCryptPasswordEncoder passwordEncoder;
 
    public PasswordEncryptService() {
       //todo add implementation here
       Dotenv dotenv = Dotenv.configure().directory("./Backend").load();
-      this.pepper = dotenv.get("PEPPER"); // Load pepper from environment variable
+      this.pepper = dotenv.get("PEPPER");
       if (this.pepper == null || this.pepper.isEmpty()) {
          throw new IllegalStateException("PEPPER ist nicht in der .env-Datei gesetzt!");
       }
 
       String costFactorStr = dotenv.get("BCRYPT_COST");
-      int costFactor = 12; // Standardwert
+      int costFactor = 12;
       if (costFactorStr != null && !costFactorStr.isEmpty()) {
          try {
             costFactor = Integer.parseInt(costFactorStr);
@@ -39,14 +39,13 @@ public class PasswordEncryptService {
 
    public String hashPassword(String password) {
       password = passwordEncoder.encode(password + pepper);
-      //todo add implementation here
       System.out.println(password);
       return password;
    }
 
    //Todo add password match function: password vs hashedPassword
    public boolean doPasswordMatch(String password, String hashedPassword) {
-      System.out.println("PasswordEncryptService.doPasswordMatch: password=" + password + ", hashedPassword=" + hashedPassword);
+      System.out.println("Password=" + password + ", hashedPassword=" + hashedPassword);
       return passwordEncoder.matches(password + pepper, hashedPassword);
    }
 }

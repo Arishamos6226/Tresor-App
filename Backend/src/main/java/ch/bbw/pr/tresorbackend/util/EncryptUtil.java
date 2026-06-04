@@ -41,7 +41,6 @@ public class EncryptUtil {
         cipher.init(Cipher.ENCRYPT_MODE, secretKey, new GCMParameterSpec(TAG_LENGTH, iv));
         byte[] encrypted = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
 
-        // IV + verschlüsselter Text zusammen speichern
         byte[] combined = new byte[IV_SIZE + encrypted.length];
         System.arraycopy(iv,        0, combined, 0,       IV_SIZE);
         System.arraycopy(encrypted, 0, combined, IV_SIZE, encrypted.length);

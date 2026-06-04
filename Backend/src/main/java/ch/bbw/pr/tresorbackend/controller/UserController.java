@@ -55,7 +55,7 @@ public class UserController {
          String json = new Gson().toJson(obj);
 
          System.out.println("UserController.createUser, validation fails: " + json);
-         return ResponseEntity.badRequest().body(json);
+         return ResponseEntity.badRequest().body(bindingResult.getAllErrors().get(0).getDefaultMessage());
       }
       System.out.println("UserController.createUser: input validation passed");
 

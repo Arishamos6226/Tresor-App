@@ -24,6 +24,8 @@ public class RegisterUser {
    private String email;
 
    @NotEmpty (message="Password is required.")
+   @Pattern( regexp="^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@#$%^&+=])(?=\\S+$).{8,20}$",
+           message="Password requirements 4 to 20 characters, one uppercase, one lowercase, special sign: @#$%^&+=, no whitespace")
    private String password;
 
    @NotEmpty (message="Password-confirmation is required.")
