@@ -1,65 +1,43 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {postUser} from "../../comunication/FetchUser";
+import React, {useState} from 'react';
+import './RegisterUser.css';
 
-/**
- * RegisterUser
- * @author Peter Rutschmann
- */
-function RegisterUser({loginValues, setLoginValues}) {
-    const navigate = useNavigate();
-
-    const initialState = {
+function RegisterUser() {
+    const [credentials, setCredentials] = useState({
         firstName: "",
         lastName: "",
         email: "",
         password: "",
         passwordConfirmation: "",
-        errorMessage: ""
+        passwordStrength: 0,
+        recaptchaVerified: false
+    });
+    const [errorMessage, setErrorMessage] = useState("");
+    const [showPasswords, setShowPasswords] = useState(false);
+
+    const evaluatePasswordStrength = (password) => {
+        const rules = [/[\d]/, /[a-z]/, /[A-Z]/, /[@#$%^&+=]/, /^\S+$/, /^.{8,20}$/];
+        const passed = rules.filter(rule => rule.test(password)).length;
+        return Math.round((passed / rules.length) * 100);
     };
-    const [credentials, setCredentials] = useState(initialState);
-    const [errorMessage, setErrorMessage] = useState('');
 
-    function evaluatePasswordStrength(password) {
-        const rules = [
-            /[0-9]/,             // digit
-            /[a-z]/,             // small letter
-            /[A-Z]/,             // capital letter
-            /[@#$%^&+=]/,        // special character
-            /^\S+$/,             // no
-            /^.{8,20}$/,         // length between 4 and 20
-        ];
+    const handlePasswordChange = (e) => {
+        const password = e.target.value;
+        setCredentials(prev => ({
+            ...prev,
+            password,
+            passwordStrength: evaluatePasswordStrength(password)
+        }));
+    };
 
-        let passed = 0;
-        for (const rule of rules) {
-            if (rule.test(password)) {
-                passed++;
-            }
-        }
-        const percentage = Math.round((passed / rules.length) * 100);
-        return percentage;
-    }
-
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        setErrorMessage('');
-
-        //validate
-        if(credentials.password !== credentials.passwordConfirmation) {
-            console.log("password != passwordConfirmation");
-            setErrorMessage('Password and password-confirmation are not equal.');
+        if (credentials.password !== credentials.passwordConfirmation) {
+            setErrorMessage("Passwords do not match!");
             return;
         }
-
-        try {
-            await postUser(credentials);
-            setLoginValues({userName: credentials.email, password: credentials.password});
-            setCredentials(initialState);
-            navigate('/');
-        } catch (error) {
-            console.error('Failed to fetch to server:', error.message);
-            setErrorMessage(error.message);
-        }
+        setErrorMessage("");
+        // Hier können Sie die Registrierung logik hinzufügen
+        console.log("Form submitted", credentials);
     };
 
     return (
@@ -67,68 +45,100 @@ function RegisterUser({loginValues, setLoginValues}) {
             <h2>Register user</h2>
             <form onSubmit={handleSubmit}>
                 <section>
-                <aside>
-                    <div>
-                        <label>Firstname:</label>
-                        <input
-                            type="text"
-                            value={credentials.firstName}
-                            onChange={(e) =>
-                                setCredentials(prevValues => ({...prevValues, firstName: e.target.value}))}
-                            required
-                            placeholder="Please enter your firstname *"
-                        />
-                    </div>
-                    <div>
-                        <label>Lastname:</label>
-                        <input
-                            type="text"
-                            value={credentials.lastName}
-                            onChange={(e) =>
-                                setCredentials(prevValues => ({...prevValues, lastName: e.target.value}))}
-                            required
-                            placeholder="Please enter your lastname *"
-                        />
-                    </div>
-                    <div>
-                        <label>Email:</label>
-                        <input
-                            type="text"
-                            value={credentials.email}
-                            onChange={(e) =>
-                                setCredentials(prevValues => ({...prevValues, email: e.target.value}))}
-                            required
-                            placeholder="Please enter your email"
-                        />
-                    </div>
-                </aside>
+                    <aside>
+                        <div>
+                            <label>Firstname:</label>
+                            <input
+                                type="text"
+                                value={credentials.firstName}
+                                onChange={(e) =>
+                                    setCredentials(prevValues => ({...prevValues, firstName: e.target.value}))}
+                                required
+                                placeholder="Please enter your firstname *"
+                            />
+                        </div>
+                        <div>
+                            <label>Lastname:</label>
+                            <input
+                                type="text"
+                                value={credentials.lastName}
+                                onChange={(e) =>
+                                    setCredentials(prevValues => ({...prevValues, lastName: e.target.value}))}
+                                required
+                                placeholder="Please enter your lastname *"
+                            />
+                        </div>
+                        <div>
+                            <label>Email:</label>
+                            <input
+                                type="text"
+                                value={credentials.email}
+                                onChange={(e) =>
+                                    setCredentials(prevValues => ({...prevValues, email: e.target.value}))}
+                                required
+                                placeholder="Please enter your email"
+                            />
+                        </div>
+                    </aside>
                     <aside>
                         <div>
                             <label>Password:</label>
                             <input
-                                type="text"
+                                type={showPasswords ? "text" : "password"}
                                 value={credentials.password}
-                                onChange={(e) =>
-                                    setCredentials(prevValues => ({...prevValues, password: e.target.value}))}
+                                onChange={handlePasswordChange}
+                                onClick={() => setShowPasswords(true)}
+                                onBlur={() => setShowPasswords(false)}
                                 required
                                 placeholder="Please enter your pwd *"
                             />
+                            <div style={{
+                                height: "10px",
+                                width: "100%",
+                                backgroundColor: "#ddd",
+                                borderRadius: "5px",
+                                marginTop: "5px"
+                            }}>
+                                <div style={{
+                                    height: "100%",
+                                    width: `${credentials.passwordStrength}%`,
+                                    backgroundColor: `hsl(${credentials.passwordStrength}, 100%, 50%)`,
+                                    borderRadius: "5px"
+                                }}></div>
+                            </div>
+                            <p style={{marginTop: "5px", fontWeight: "bold"}}>
+                                {credentials.passwordStrength}%
+                            </p>
                         </div>
                         <div>
                             <label>Password confirmation:</label>
                             <input
-                                type="text"
+                                type={showPasswords ? "text" : "password"}
                                 value={credentials.passwordConfirmation}
                                 onChange={(e) =>
-                                    setCredentials(prevValues => ({...prevValues, passwordConfirmation: e.target.value}))}
+                                    setCredentials(prevValues => ({
+                                        ...prevValues,
+                                        passwordConfirmation: e.target.value
+                                    }))}
                                 required
                                 placeholder="Please confirm your pwd *"
                             />
                         </div>
+                        <button
+                            type="button"
+                            onClick={() => setShowPasswords(prev => !prev)}
+                            style={{
+                                marginTop: "10px",
+                                padding: "5px 10px",
+                                cursor: "pointer"
+                            }}
+                        >
+                            {showPasswords ? "Passwörter verbergen" : "Passwörter anzeigen"}
+                        </button>
                     </aside>
                 </section>
                 <button type="submit">Register</button>
-                {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+                {errorMessage && <p style={{color: 'red'}}>{errorMessage}</p>}
             </form>
         </div>
     );
