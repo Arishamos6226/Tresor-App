@@ -61,6 +61,10 @@ public class UserController {
 
       //password validation
       //todo add implementation
+      if (!registerUser.getPassword().equals(registerUser.getPasswordConfirmation())) {
+         return ResponseEntity.badRequest().body("Passwort und Passwort-Bestätigung stimmen nicht überein.");
+      }
+
       System.out.println("UserController.createUser, password validation passed");
 
       //transform registerUser to user
