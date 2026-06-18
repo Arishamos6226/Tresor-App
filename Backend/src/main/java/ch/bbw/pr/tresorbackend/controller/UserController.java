@@ -11,12 +11,17 @@ import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Scanner;
 import java.util.stream.Collectors;
 
 /**
@@ -24,28 +29,39 @@ import java.util.stream.Collectors;
  * @author Peter Rutschmann
  */
 @RestController
-@AllArgsConstructor
 @RequestMapping("api/users")
 public class UserController {
 
-   private UserService userService;
-   private PasswordEncryptService passwordService;
+   private final UserService userService;
+   private final PasswordEncryptService passwordService;
    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
+   private final String secretKey;
+
+   public UserController(UserService userService,
+                         PasswordEncryptService passwordService,
+                         @Value("${recaptcha.secret}") String secretKey) {
+      this.userService = userService;
+      this.passwordService = passwordService;
+      this.secretKey = secretKey;
+   }
 
    // build create User REST API
    @CrossOrigin(origins = "${CROSS_ORIGIN}")
    @PostMapping
    public ResponseEntity<String> createUser(@Valid @RequestBody RegisterUser registerUser, BindingResult bindingResult) {
-      //captcha
-      //todo add implementation
 
+      // ✅ Captcha-Token aus dem Request holen und bei Google verifizieren
+      String recaptchaToken = registerUser.getRecaptchaToken();
+      if (!verifyCaptcha(recaptchaToken)) {
+         return ResponseEntity.badRequest().body("Invalid CAPTCHA");
+      }
       System.out.println("UserController.createUser: captcha passed.");
 
-      //input validation
+      // Input validation
       if (bindingResult.hasErrors()) {
          List<String> errors = bindingResult.getFieldErrors().stream()
-               .map(fieldError -> fieldError.getField() + ": " + fieldError.getDefaultMessage())
-               .collect(Collectors.toList());
+                 .map(fieldError -> fieldError.getField() + ": " + fieldError.getDefaultMessage())
+                 .collect(Collectors.toList());
          System.out.println("UserController.createUser " + errors);
 
          JsonArray arr = new JsonArray();
@@ -59,22 +75,20 @@ public class UserController {
       }
       System.out.println("UserController.createUser: input validation passed");
 
-      //password validation
-      //todo add implementation
+      // Password validation
       if (!registerUser.getPassword().equals(registerUser.getPasswordConfirmation())) {
          return ResponseEntity.badRequest().body("Passwort und Passwort-Bestätigung stimmen nicht überein.");
       }
-
       System.out.println("UserController.createUser, password validation passed");
 
-      //transform registerUser to user
+      // Transform registerUser to user
       User user = new User(
-            null,
-            registerUser.getFirstName(),
-            registerUser.getLastName(),
-            registerUser.getEmail(),
-            passwordService.hashPassword(registerUser.getPassword())
-            );
+              null,
+              registerUser.getFirstName(),
+              registerUser.getLastName(),
+              registerUser.getEmail(),
+              passwordService.hashPassword(registerUser.getPassword())
+      );
 
       User savedUser = userService.createUser(user);
       JsonObject obj = new JsonObject();
@@ -91,7 +105,6 @@ public class UserController {
    }
 
    // build get user by id REST API
-   // http://localhost:8080/api/users/1
    @CrossOrigin(origins = "${CROSS_ORIGIN}")
    @GetMapping("{id}")
    public ResponseEntity<User> getUserById(@PathVariable("id") Long userId) {
@@ -101,7 +114,6 @@ public class UserController {
    }
 
    // Build Get All Users REST API
-   // http://localhost:8080/api/users
    @CrossOrigin(origins = "${CROSS_ORIGIN}")
    @GetMapping
    public ResponseEntity<List<User>> getAllUsers() {
@@ -111,7 +123,6 @@ public class UserController {
    }
 
    // Build Update User REST API
-   // http://localhost:8080/api/users/1
    @CrossOrigin(origins = "${CROSS_ORIGIN}")
    @PutMapping("{id}")
    public ResponseEntity<User> updateUser(@PathVariable("id") Long userId,
@@ -126,21 +137,21 @@ public class UserController {
    @CrossOrigin(origins = "${CROSS_ORIGIN}")
    @DeleteMapping("{id}")
    public ResponseEntity<String> deleteUser(@PathVariable("id") Long userId) {
-      if( userService.deleteUser(userId))
+      if (userService.deleteUser(userId))
          return new ResponseEntity<>("User successfully deleted!", HttpStatus.OK);
       return ResponseEntity.notFound().build();
    }
 
-   // get user id by email
+   // Get user id by email
    @CrossOrigin(origins = "${CROSS_ORIGIN}")
    @PostMapping("/byemail")
    public ResponseEntity<String> getUserIdByEmail(@RequestBody EmailAdress email, BindingResult bindingResult) {
       System.out.println("UserController.getUserIdByEmail: " + email);
-      //input validation
+
       if (bindingResult.hasErrors()) {
          List<String> errors = bindingResult.getFieldErrors().stream()
-               .map(fieldError -> fieldError.getField() + ": " + fieldError.getDefaultMessage())
-               .collect(Collectors.toList());
+                 .map(fieldError -> fieldError.getField() + ": " + fieldError.getDefaultMessage())
+                 .collect(Collectors.toList());
          System.out.println("UserController.createUser " + errors);
 
          JsonArray arr = new JsonArray();
@@ -161,10 +172,10 @@ public class UserController {
          JsonObject obj = new JsonObject();
          obj.addProperty("message", "No user found with this email");
          String json = new Gson().toJson(obj);
-
          System.out.println("UserController.getUserIdByEmail, fails: " + json);
          return ResponseEntity.badRequest().body(json);
       }
+
       System.out.println("UserController.getUserIdByEmail, user find by email");
       JsonObject obj = new JsonObject();
       obj.addProperty("answer", user.getId());
@@ -173,33 +184,55 @@ public class UserController {
       return ResponseEntity.accepted().body(json);
    }
 
-   // simple login with no websecurity, just name and password
+   // Simple login
    @CrossOrigin(origins = "${CROSS_ORIGIN}")
    @PostMapping("/login")
    public ResponseEntity<LoginResponse> doLoginUser(@RequestBody LoginUser loginUser, BindingResult bindingResult) {
-       System.out.println("UserController.doLoginUser: " + loginUser);
+      System.out.println("UserController.doLoginUser: " + loginUser);
 
-       if (bindingResult.hasErrors()) {
-           String errorMessage = bindingResult.getFieldErrors().stream()
-                   .map(fieldError -> fieldError.getField() + ": " + fieldError.getDefaultMessage())
-                   .collect(Collectors.joining("; "));
-           return ResponseEntity.badRequest().body(new LoginResponse(errorMessage, null));
-       }
+      if (bindingResult.hasErrors()) {
+         String errorMessage = bindingResult.getFieldErrors().stream()
+                 .map(fieldError -> fieldError.getField() + ": " + fieldError.getDefaultMessage())
+                 .collect(Collectors.joining("; "));
+         return ResponseEntity.badRequest().body(new LoginResponse(errorMessage, null));
+      }
 
-       User user = userService.findByEmail(loginUser.getEmail());
-       if (user == null) {
-           System.out.println("UserController.doLoginUser: user not found");
-           return ResponseEntity.badRequest().body(new LoginResponse("No user found with this email", null));
-       }
+      User user = userService.findByEmail(loginUser.getEmail());
+      if (user == null) {
+         System.out.println("UserController.doLoginUser: user not found");
+         return ResponseEntity.badRequest().body(new LoginResponse("No user found with this email", null));
+      }
 
-       // Passwort-Überprüfung
-       if (!passwordService.doPasswordMatch(loginUser.getPassword(), user.getPassword())) {
-           System.out.println("UserController.doLoginUser: Passwort stimmt nicht überein");
-           return ResponseEntity.badRequest().body(new LoginResponse("Invalid password", null));
-       }
+      if (!passwordService.doPasswordMatch(loginUser.getPassword(), user.getPassword())) {
+         System.out.println("UserController.doLoginUser: Passwort stimmt nicht überein");
+         return ResponseEntity.badRequest().body(new LoginResponse("Invalid password", null));
+      }
 
-       System.out.println("UserController.doLoginUser: login successful");
-       return ResponseEntity.ok(new LoginResponse("Login successful", user.getId()));
+      System.out.println("UserController.doLoginUser: login successful");
+      return ResponseEntity.ok(new LoginResponse("Login successful", user.getId()));
    }
 
+   // ✅ Hilfsmethode: Token bei Google ReCaptcha verifizieren
+   private boolean verifyCaptcha(String token) {
+      try {
+         String url = "https://www.google.com/recaptcha/api/siteverify";
+         String params = "secret=" + secretKey + "&response=" + token;
+
+         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+         conn.setRequestMethod("POST");
+         conn.setDoOutput(true);
+         conn.getOutputStream().write(params.getBytes(StandardCharsets.UTF_8));
+
+         Scanner scanner = new Scanner(conn.getInputStream());
+         String response = scanner.useDelimiter("\\A").next();
+         scanner.close();
+
+         System.out.println("verifyCaptcha response: " + response);
+
+         return response.contains("\"success\": true");
+      } catch (Exception e) {
+         logger.error("Fehler bei reCAPTCHA-Verifizierung", e);
+         return false;
+      }
+   }
 }

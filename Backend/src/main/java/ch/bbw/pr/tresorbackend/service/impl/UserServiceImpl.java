@@ -58,6 +58,18 @@ public class UserServiceImpl implements UserService {
    }
 
    @Override
+   public User updatePassword(User user) {
+      return SafeDbCall.safeDbCall(() -> {
+         User existingUser = userRepository.findById(user.getId()).orElse(null);
+         if (existingUser != null) {
+            existingUser.setPassword(user.getPassword());
+            return userRepository.save(existingUser);
+         }
+         return null;
+      }, null);
+   }
+
+   @Override
    public boolean deleteUser(Long userId) {
       return SafeDbCall.safeDbCall(() -> userRepository.deleteById(userId));
    }

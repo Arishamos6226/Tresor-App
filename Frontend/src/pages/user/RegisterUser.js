@@ -1,7 +1,9 @@
-import React, {useState} from 'react';
-import './RegisterUser.css';
+import React, { useState } from 'react';
+import ReCAPTCHA from 'react-google-recaptcha';
+import { useNavigate } from 'react-router-dom';
 
 function RegisterUser() {
+    const navigate = useNavigate();
     const [credentials, setCredentials] = useState({
         firstName: "",
         lastName: "",
@@ -9,7 +11,7 @@ function RegisterUser() {
         password: "",
         passwordConfirmation: "",
         passwordStrength: 0,
-        recaptchaVerified: false
+        recaptchaToken: ""
     });
     const [errorMessage, setErrorMessage] = useState("");
     const [showPasswords, setShowPasswords] = useState(false);
@@ -29,15 +31,40 @@ function RegisterUser() {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleRecaptchaChange = (token) => {
+        setCredentials(prev => ({ ...prev, recaptchaToken: token }));
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (credentials.password !== credentials.passwordConfirmation) {
-            setErrorMessage("Passwords do not match!");
-            return;
+        try {
+            const { passwordStrength, ...dataToSend } = credentials;
+
+            const response = await fetch("http://localhost:8081/api/users", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(dataToSend),
+            });
+
+            const text = await response.text();
+            let result;
+            try {
+                result = JSON.parse(text);
+            } catch {
+                result = text;
+            }
+
+            if (!response.ok) {
+                setErrorMessage(typeof result === "string" ? result : JSON.stringify(result));
+            } else {
+                // ✅ Erfolgreich registriert → zur Login-Seite navigieren
+                navigate("/user/login");
+            }
+
+        } catch (error) {
+            console.error("Fehler beim Absenden:", error);
+            setErrorMessage("Verbindungsfehler zum Server.");
         }
-        setErrorMessage("");
-        // Hier können Sie die Registrierung logik hinzufügen
-        console.log("Form submitted", credentials);
     };
 
     return (
@@ -52,7 +79,7 @@ function RegisterUser() {
                                 type="text"
                                 value={credentials.firstName}
                                 onChange={(e) =>
-                                    setCredentials(prevValues => ({...prevValues, firstName: e.target.value}))}
+                                    setCredentials(prevValues => ({ ...prevValues, firstName: e.target.value }))}
                                 required
                                 placeholder="Please enter your firstname *"
                             />
@@ -63,7 +90,7 @@ function RegisterUser() {
                                 type="text"
                                 value={credentials.lastName}
                                 onChange={(e) =>
-                                    setCredentials(prevValues => ({...prevValues, lastName: e.target.value}))}
+                                    setCredentials(prevValues => ({ ...prevValues, lastName: e.target.value }))}
                                 required
                                 placeholder="Please enter your lastname *"
                             />
@@ -74,7 +101,7 @@ function RegisterUser() {
                                 type="text"
                                 value={credentials.email}
                                 onChange={(e) =>
-                                    setCredentials(prevValues => ({...prevValues, email: e.target.value}))}
+                                    setCredentials(prevValues => ({ ...prevValues, email: e.target.value }))}
                                 required
                                 placeholder="Please enter your email"
                             />
@@ -106,7 +133,7 @@ function RegisterUser() {
                                     borderRadius: "5px"
                                 }}></div>
                             </div>
-                            <p style={{marginTop: "5px", fontWeight: "bold"}}>
+                            <p style={{ marginTop: "5px", fontWeight: "bold" }}>
                                 {credentials.passwordStrength}%
                             </p>
                         </div>
@@ -135,10 +162,15 @@ function RegisterUser() {
                         >
                             {showPasswords ? "Passwörter verbergen" : "Passwörter anzeigen"}
                         </button>
+
+                        <ReCAPTCHA
+                            sitekey="6LcMzSUtAAAAAOdAhWg5kbaVwIYYwizgoloTE1xj"
+                            onChange={handleRecaptchaChange}
+                        />
                     </aside>
                 </section>
                 <button type="submit">Register</button>
-                {errorMessage && <p style={{color: 'red'}}>{errorMessage}</p>}
+                {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
             </form>
         </div>
     );

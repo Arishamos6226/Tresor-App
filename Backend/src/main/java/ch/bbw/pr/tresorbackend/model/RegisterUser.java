@@ -31,5 +31,6 @@ public class RegisterUser {
    @NotEmpty (message="Password-confirmation is required.")
    private String passwordConfirmation;
 
+   @Getter
    private String recaptchaToken;
 }
