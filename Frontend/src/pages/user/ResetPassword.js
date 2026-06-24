@@ -36,7 +36,7 @@ function ResetPassword() {
         try {
             await postPasswordResetConfirm(token, passwords.newPassword, passwords.confirmPassword);
             alert("Passwort erfolgreich zurückgesetzt.");
-            navigate("/login");
+            navigate("/user/login");
         } catch (err) {
             setError("Fehler beim Zurücksetzen des Passworts.");
         }

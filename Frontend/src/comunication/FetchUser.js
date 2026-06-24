@@ -4,6 +4,15 @@
  */
 
 
+const getBaseUrl = () => {
+    const protocol = process.env.REACT_APP_API_PROTOCOL;
+    const host = process.env.REACT_APP_API_HOST;
+    const port = process.env.REACT_APP_API_PORT;
+    const path = process.env.REACT_APP_API_PATH;
+    const portPart = port ? `:${port}` : '';
+    return `${protocol}://${host}${portPart}${path}`;
+};
+
 export const getUsers = async () => {
     const protocol = process.env.REACT_APP_API_PROTOCOL; // "http"
     const host = process.env.REACT_APP_API_HOST; // "localhost"
@@ -71,7 +80,7 @@ export const postUser = async (content) => {
 };
 
 export const postPasswordResetRequest = async (email) => {
-    const API_URL = getApiUrl();
+    const API_URL = getBaseUrl();
     const response = await fetch(`${API_URL}/password-reset/request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -80,23 +89,26 @@ export const postPasswordResetRequest = async (email) => {
     if (!response.ok) throw new Error(await response.text());
 };
 
-export const getPasswordResetValidate = async (token) => {
-    const API_URL = getApiUrl();
-    const response = await fetch(`${API_URL}/password-reset/validate?token=${token}`);
-    if (!response.ok) throw new Error(await response.text());
-    return await response.json();
-};
+export async function getPasswordResetValidate(token) {
+    const response = await fetch(`${getBaseUrl()}/password-reset/validate?token=${token}`);
+    if (!response.ok) {
+        throw new Error("Token ungültig oder abgelaufen.");
+    }
+    return response.text(); // ← text() statt json()
+}
 
-export const postPasswordResetConfirm = async (token, newPassword, confirmPassword) => {
-    const API_URL = getApiUrl();
-    const response = await fetch(`${API_URL}/password-reset/confirm`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+export async function postPasswordResetConfirm(token, newPassword, confirmPassword) {
+    const response = await fetch(`${getBaseUrl()}/password-reset/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, newPassword, confirmPassword }),
     });
-    if (!response.ok) throw new Error(await response.text());
-    return await response.json();
-};
+    if (!response.ok) {
+        const message = await response.text(); // ← text() statt json()
+        throw new Error(message || "Fehler beim Zurücksetzen.");
+    }
+    return response.text(); // ← text() statt json()
+}
 
 export const postUserLogin = async (content) => {
     const protocol = process.env.REACT_APP_API_PROTOCOL; // "http"

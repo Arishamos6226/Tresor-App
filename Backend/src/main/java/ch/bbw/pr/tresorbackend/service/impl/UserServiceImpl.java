@@ -58,15 +58,12 @@ public class UserServiceImpl implements UserService {
    }
 
    @Override
+   // In UserService.java ergänzen:
    public User updatePassword(User user) {
-      return SafeDbCall.safeDbCall(() -> {
-         User existingUser = userRepository.findById(user.getId()).orElse(null);
-         if (existingUser != null) {
-            existingUser.setPassword(user.getPassword());
-            return userRepository.save(existingUser);
-         }
-         return null;
-      }, null);
+      User existingUser = userRepository.findById(user.getId()).orElse(null);
+      if (existingUser == null) return null;
+      existingUser.setPassword(user.getPassword());
+      return userRepository.save(existingUser);
    }
 
    @Override
