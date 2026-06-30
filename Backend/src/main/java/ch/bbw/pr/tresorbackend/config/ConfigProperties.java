@@ -1,4 +1,4 @@
-package ch.bbw.pr.tresorbackend.model;
+package ch.bbw.pr.tresorbackend.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

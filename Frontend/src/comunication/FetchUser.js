@@ -129,11 +129,12 @@ export const postUserLogin = async (content) => {
                 password: `${content.password}`
             })
         });
-        console.log(response);
+
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Server response failed.');
+            const errorText = await response.text(); // Fallback für leere oder nicht-JSON-Antworten
+            throw new Error(errorText || 'Server response failed.');
         }
+
         const data = await response.json();
         console.log('User successfully logged in:', data);
         return data;

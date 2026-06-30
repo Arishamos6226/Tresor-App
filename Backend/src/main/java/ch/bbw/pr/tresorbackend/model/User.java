@@ -3,6 +3,8 @@ package ch.bbw.pr.tresorbackend.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.sql.ConnectionBuilder;
+
 /**
  * User
  * @author Peter Rutschmann
@@ -11,7 +13,8 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Entity()
+@Builder(toBuilder = true)
 @Table(name = "user")
 public class User {
    @Id
@@ -32,6 +35,9 @@ public class User {
 
    @Column(name = "salt")
    private String salt;
+
+   @Column(name = "role")
+    private String role;
 
    public User(Long id, String firstName, String lastName, String email, String password) {
       this.id = id;

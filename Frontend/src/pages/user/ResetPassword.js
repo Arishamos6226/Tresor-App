@@ -12,6 +12,21 @@ function ResetPassword() {
 
     const token = searchParams.get("token");
 
+    const evaluatePasswordStrength = (password) => {
+        const rules = [/[\d]/, /[a-z]/, /[A-Z]/, /[@#$%^&+=]/, /^\S+$/, /^.{8,20}$/];
+        const passed = rules.filter(rule => rule.test(password)).length;
+        return Math.round((passed / rules.length) * 100);
+    };
+
+    const handlePasswordChange = (e) => {
+        const newPassword = e.target.value;
+        setPasswords(prev => ({
+            ...prev,
+            newPassword,
+            passwordStrength: evaluatePasswordStrength(newPassword),
+        }));
+    };
+
     useEffect(() => {
         const validateToken = async () => {
             try {
@@ -45,23 +60,52 @@ function ResetPassword() {
     if (loading) return <p>Token wird überprüft...</p>;
     if (error) return <div><p>{error}</p><button onClick={() => navigate("/login")}>Zurück zum Login</button></div>;
 
+
     return (
         <div>
             <h2>Passwort zurücksetzen</h2>
             <form onSubmit={handleSubmit}>
-                <input
-                    type="password"
-                    placeholder="Neues Passwort"
-                    value={passwords.newPassword}
-                    onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
-                />
-                <input
-                    type="password"
-                    placeholder="Passwort bestätigen"
-                    value={passwords.confirmPassword}
-                    onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })}
-                />
+                <div>
+                    <label>Neues Passwort:</label>
+                    <input
+                        type="password"
+                        value={passwords.newPassword}
+                        onChange={handlePasswordChange}
+                        required
+                        placeholder="Bitte neues Passwort eingeben"
+                    />
+                </div>
+                <div>
+                    <label>Passwort bestätigen:</label>
+                    <input
+                        type="password"
+                        value={passwords.confirmPassword}
+                        onChange={(e) =>
+                            setPasswords(prev => ({ ...prev, confirmPassword: e.target.value }))
+                        }
+                        required
+                        placeholder="Bitte Passwort bestätigen"
+                    />
+                </div>
+                <div style={{
+                    height: "10px",
+                    width: "25%",
+                    backgroundColor: "#ddd",
+                    borderRadius: "5px",
+                    marginTop: "5px"
+                }}>
+                    <div style={{
+                        height: "100%",
+                        width: `${passwords.passwordStrength}%`,
+                        backgroundColor: `hsl(${passwords.passwordStrength}, 100%, 50%)`,
+                        borderRadius: "5px"
+                    }}></div>
+                </div>
+                <p style={{ marginTop: "5px", fontWeight: "bold" }}>
+                    {passwords.passwordStrength}%
+                </p>
                 <button type="submit">Passwort zurücksetzen</button>
+                {error && <p style={{ color: "red" }}>{error}</p>}
             </form>
         </div>
     );
