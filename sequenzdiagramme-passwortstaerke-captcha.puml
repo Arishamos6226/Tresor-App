@@ -1,0 +1,72 @@
+@startuml Sequenzdiagramm_Passwortstaerke
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 20
+autonumber
+
+title Tresor-App - Sequenzdiagramm Passwortstaerke
+
+actor "Benutzer" as U
+participant "Frontend\nRegisterUser.js" as FE
+participant "Backend\nUserController" as UC
+participant "Service\nPasswordValidator / Bean Validation" as PVS
+
+U -> FE: Passwort eingeben
+FE -> FE: evaluatePasswordStrength(password)
+FE --> U: Live-Staerkeanzeige (0-100%)
+
+U -> FE: Registrieren klicken
+FE -> UC: POST /api/users\n(firstName, lastName, email, password, passwordConfirmation, recaptchaToken)
+UC -> PVS: Validiere Passwort-Regeln\n(min 8, max 20, Gross/Klein, Zahl, Sonderzeichen)
+
+alt Passwort zu schwach / ungueltig
+PVS --> UC: Validation failed
+UC --> FE: 400 Bad Request\n(Validierungsfehler)
+FE --> U: Fehlermeldung anzeigen
+else Passwort stark genug
+PVS --> UC: Validation OK
+UC --> FE: Weiter mit Captcha + User-Erstellung
+FE --> U: Erfolg / Weiterleitung Login
+end
+
+@enduml
+
+@startuml Sequenzdiagramm_Captcha_Front_Backend_Service
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 20
+autonumber
+
+title Tresor-App - Sequenzdiagramm Captcha (Front-, Backend, Service)
+
+actor "Benutzer" as U
+participant "Frontend\nRegisterUser.js" as FE
+participant "Backend\nUserController" as UC
+participant "Captcha-Service\nverifyCaptcha(token)" as CS
+participant "Google reCAPTCHA API\n/siteverify" as GRC
+participant "UserService" as US
+database "Tresor DB" as DB
+
+U -> FE: Formular ausfuellen + Captcha loesen
+FE -> FE: recaptchaToken speichern
+
+U -> FE: Registrieren klicken
+FE -> UC: POST /api/users\n(..., recaptchaToken)
+
+UC -> CS: verifyCaptcha(recaptchaToken)
+CS -> GRC: POST secret + response(token)
+GRC --> CS: { success: true/false }
+CS --> UC: Captcha-Ergebnis
+
+alt Captcha ungueltig
+UC --> FE: 400 Bad Request\n"Invalid CAPTCHA"
+FE --> U: Hinweis: Captcha erneut ausfuehren
+else Captcha gueltig
+UC -> US: createUser(...)
+US -> DB: User speichern
+DB --> US: OK
+US --> UC: User gespeichert
+UC --> FE: 202 Accepted
+FE --> U: Weiterleitung auf Login
+end
+
+@enduml
+

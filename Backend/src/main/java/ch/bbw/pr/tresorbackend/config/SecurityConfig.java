@@ -39,15 +39,12 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/users",
-                                "/api/users/login",       // ← fehlt
-                                "/api/users/byemail",
-                                "api/password-reset/**", //← fehlt (falls öffentlich)
+                                "/api/users/login",
                                 "/login",
                                 "/register"
                         ).permitAll()
-                        .requestMatchers("/token", "/public/**").permitAll()                // öffentlich
-                        .requestMatchers("/api/secrets").authenticated()                       // jeder eingeloggte Benutzer
-                        .requestMatchers("/admin/**").hasRole("ADMIN")                     // nur Admins
+                        .requestMatchers("/api/secrets/**").hasAnyRole("USER", "ADMIN") // Zugriff für USER und ADMIN
+                        .requestMatchers("/admin/**").hasRole("ADMIN") // Nur Admins
                         .anyRequest().denyAll()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)

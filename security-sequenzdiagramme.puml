@@ -1,0 +1,104 @@
+@startuml BasicAuthVsJwt_TresorApp
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 20
+autonumber
+
+title Tresor-App - Basic Authentication vs JWT
+
+actor Benutzer
+participant "Frontend (React)" as FE
+participant "Backend (Spring Security)" as BE
+participant "JwtAuthenticationFilter" as JWTF
+participant "CustomUserDetailsService" as UDS
+database "Tresor DB" as DB
+participant "API-Client (z.B. Postman)" as API
+
+note over BE
+SecurityConfig:
+- httpBasic() aktiviert
+- JWT-Filter vor UsernamePasswordAuthenticationFilter
+- /api/users/login permitAll
+- geschuetzte Endpunkte authentifiziert
+end note
+
+group JWT-Flow (Hauptflow der Tresor-App)
+Benutzer -> FE: Login mit E-Mail + Passwort
+FE -> BE: POST /api/users/login
+BE -> DB: User per E-Mail laden
+DB --> BE: User + gehashtes Passwort
+BE -> BE: Passwort pruefen (PasswordEncryptService)
+BE --> FE: 200 + JWT Token
+
+Benutzer -> FE: Geschuetzte Aktion (z.B. Users/Secrets)
+FE -> BE: Request mit Authorization: Bearer <JWT>
+BE -> JWTF: Token extrahieren + validieren
+JWTF -> UDS: loadUserByUsername(email)
+UDS -> DB: User laden
+DB --> UDS: UserDetails
+UDS --> JWTF: UserDetails
+JWTF --> BE: SecurityContext gesetzt
+BE --> FE: 200 OK (oder 403 bei fehlender Rolle)
+end
+
+group Basic-Auth-Flow (Alternativ, da httpBasic aktiv)
+Benutzer -> API: Zugangsdaten in API-Client erfassen
+API -> BE: Request mit Authorization: Basic base64(user:pass)
+BE -> UDS: User laden + Passwortvergleich
+UDS -> DB: User laden
+DB --> UDS: UserDetails
+alt gueltige Basic-Credentials
+UDS --> BE: authentifiziert
+BE --> API: 200 OK
+else ungueltige Basic-Credentials
+UDS --> BE: Auth fehlgeschlagen
+BE --> API: 401 Unauthorized
+end
+end
+
+@enduml
+
+@startuml Register_PasswordStrength_Captcha
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 20
+autonumber
+
+title Tresor-App - Registrierung mit Passwortstaerke + Captcha (Frontend/Backend)
+
+actor Benutzer
+participant "RegisterUser.js" as FE
+participant "ReCAPTCHA Widget" as RCFE
+participant "UserController" as UC
+participant "Google siteverify API" as GRC
+participant "PasswordEncryptService" as PES
+database "Tresor DB" as DB
+
+Benutzer -> FE: Passwort eingeben
+FE -> FE: evaluatePasswordStrength(password)
+FE --> Benutzer: Staerkeanzeige (0-100%)
+
+Benutzer -> RCFE: Captcha loesen
+RCFE --> FE: recaptchaToken
+
+Benutzer -> FE: Formular absenden
+FE -> UC: POST /api/users\n{firstName,lastName,email,password,passwordConfirmation,recaptchaToken}
+
+UC -> GRC: POST /recaptcha/api/siteverify\nsecret + response(token)
+GRC --> UC: {"success": true/false}
+
+alt Captcha ungueltig
+UC --> FE: 400 Bad Request ("Invalid CAPTCHA")
+else Captcha gueltig
+UC -> UC: Bean Validation (inkl. Passwort-Regex in RegisterUser)
+alt Passwort zu schwach oder Daten ungueltig
+UC --> FE: 400 Bad Request (Validierungsfehler)
+else Daten gueltig
+UC -> PES: hashPassword(password)
+PES --> UC: gehashtes Passwort
+UC -> DB: User speichern
+DB --> UC: User gespeichert
+UC --> FE: 202 Accepted ("User saved")
+end
+end
+
+@enduml
+
